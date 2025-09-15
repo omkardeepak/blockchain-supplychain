@@ -11,6 +11,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.50.3",
     "bcrypt": "^6.0.0",
+    "date-fns": "^4.1.0",
     "dotenv": "^17.1.0",
     "ethers": "^6.15.0",
     "formidable": "^3.5.4",
@@ -29,7 +30,7 @@
     "react-dom": "^19.1.0",
     "react-leaflet": "^5.0.0",
     "reactflow": "^11.11.4",
-    "recharts": "^2.15.3"
+    "recharts": "^2.15.4"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",

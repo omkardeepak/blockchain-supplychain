@@ -11,11 +11,54 @@ import QRCode from 'qrcode';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts";
+import GraphBlock from '../../components/Graphblock/page';
 
 export default function FarmerDashboard() {
   const { user, logout, loading: authLoading } = useAuth();
   const router = useRouter();
 
+      const [dataPoints, setDataPoints] = useState([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const res = await fetch('/api/sensor-data');
+      const json = await res.json();
+      setDataPoints(json);
+    };
+
+    fetchData();
+
+    // Optional: poll every 10 seconds
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const chartData = {
+    labels: dataPoints.map((d) => new Date(d.timestamp).toLocaleTimeString()),
+    datasets: [
+      {
+        label: 'Temperature (°C)',
+        data: dataPoints.map((d) => d.temperature),
+        borderColor: 'rgba(255, 99, 132, 1)',
+        fill: false,
+      },
+      {
+        label: 'Humidity (%)',
+        data: dataPoints.map((d) => d.humidity),
+        borderColor: 'rgba(54, 162, 235, 1)',
+        fill: false,
+      },
+    ],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+    },
+  };
   // State for farm and product data
   const [userFarms, setUserFarms] = useState([]);
   const [selectedFarm, setSelectedFarm] = useState(null);
@@ -51,19 +94,38 @@ export default function FarmerDashboard() {
   const shippableRoles = ['Collection Point', 'Warehouse', 'Processing Unit', 'Retailer'];
     const [liveData, setLiveData] = useState([]);
 
-    //graph from sensors 
-    useEffect(() => {
-    const fetchSheetData = async () => {
-        try {
-            const res = await fetch("https://script.google.com/macros/s/AKfycbxm1V-sNB2PiwhlPsaVZLIDE3BYkAHdkBbwIr3hiYi26FZ5TGtTnZRohnWmMmhgc1vK/exec?type=json");
-            const json = await res.json();
-            setLiveData(json.map(entry => ({...entry, timestamp: new Date(entry.timestamp).toLocaleTimeString(), temperature: Number(entry.temperature), humidity: Number(entry.humidity), soil: Number(entry.soil), rain: Number(entry.rain) })));
-        } catch(error) { console.error("Failed to fetch live sensor data:", error); }
-    };
-    fetchSheetData();
-    const interval = setInterval(fetchSheetData, 10000);
-    return () => clearInterval(interval);
-  }, []);
+useEffect(() => {
+  const fetchSensorData = async () => {
+    try {
+      const res = await fetch('/api/sensor-data');
+      const json = await res.json();
+
+      // Format data without converting timestamps
+      const formatted = json.map(entry => ({
+        ...entry,
+        timestamp: entry.timestamp, // keep ISO string like "2025-09-15T14:20:00Z"
+        temperature: Number(entry.temperature),
+        humidity: Number(entry.humidity),
+        soil: Number(entry.soil),
+        rain: Number(entry.rain),
+      }));
+
+      // Display the data in the terminal (browser console)
+      console.log("Fetched sensor data:", formatted);
+
+      setLiveData(formatted);
+    } catch (error) {
+      console.error("Failed to fetch sensor data:", error);
+    }
+  };
+
+  fetchSensorData();
+  const interval = setInterval(fetchSensorData, 10000); // Refresh every 10s
+
+  return () => clearInterval(interval);
+}, []);
+
+
   
   // Fetch user's registered farms from the backend
   useEffect(() => {
@@ -273,10 +335,11 @@ export default function FarmerDashboard() {
                     <div className="mb-8">
     <h2 className="text-2xl font-bold text-gray-800 mb-4">Live Farm Conditions</h2>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {graphBlock("Temperature (°C)", "#ef4444", "temperature")}
-        {graphBlock("Humidity (%)", "#3b82f6", "humidity")}
-        {graphBlock("Soil Moisture", "#a16207", "soil")}
-        {graphBlock("Rainfall", "#6b7280", "rain")}
+<GraphBlock title="Temperature (°C)" color="#f87171" dataKey="temperature" data={liveData} />
+<GraphBlock title="Humidity (%)" color="#60a5fa" dataKey="humidity" data={liveData} />
+<GraphBlock title="Soil Moisture" color="#34d399" dataKey="soil" data={liveData} />
+<GraphBlock title="Rain Sensor" color="#818cf8" dataKey="rain" data={liveData} />
+
     </div>
 </div>
 
