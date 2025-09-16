@@ -31,30 +31,31 @@ export default async function handler(req, res) {
       return res.status(500).json({ message: 'Internal Server Error' });
     }
   }
+  
+if (req.method === 'GET') {
+  try {
+    const { after } = req.query;
+    const filter = after ? { timestamp: { $gt: new Date(after) } } : {};
 
-  if (req.method === 'GET') {
-    try {
-      // Fetch latest 100 entries, sorted by timestamp descending
-      const data = await db
-        .collection('sensorData')
-        .find({})
-        .sort({ timestamp: -1 })
-        .limit(100)
-        .toArray();
+    const data = await db
+      .collection('sensorData')
+      .find(filter, { projection: { _id: 0 } })
+      .sort({ timestamp: -1 })
+      .limit(100)
+      .toArray();
 
-      // Convert Date objects to ISO strings for JSON serialization
-      const formattedData = data.map((entry) => ({
-        ...entry,
-        timestamp: entry.timestamp.toISOString(),
-        _id: undefined, // optionally hide MongoDB _id
-      }));
+    const formattedData = data.map(entry => ({
+      ...entry,
+      timestamp: entry.timestamp.toISOString(),
+    }));
 
-      return res.status(200).json(formattedData);
-    } catch (error) {
-      console.error('Failed to fetch sensor data:', error);
-      return res.status(500).json({ message: 'Internal Server Error' });
-    }
+    return res.status(200).json(formattedData.reverse()); // Oldest to newest
+  } catch (error) {
+    console.error('Failed to fetch sensor data:', error);
+    return res.status(500).json({ message: 'Internal Server Error' });
   }
+}
+
 
   // Handle unsupported methods
   res.setHeader('Allow', ['GET', 'POST']);

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { ethers } from "ethers";
 import Footer from "../../components/Footer/page";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo,useRef } from "react";
 import { useAuth } from '../../context/AuthContext';
 import { Leaf, LogOut, Wallet, PlusCircle, Package, Truck, Loader2, PackagePlus, Search, X, ArrowRight, Warehouse, Building, ShoppingBasket, Factory, QrCode, CheckCircle as CheckCircleIcon, Shield } from "lucide-react";
 import { useRouter } from 'next/navigation';
@@ -19,46 +19,6 @@ export default function FarmerDashboard() {
 
       const [dataPoints, setDataPoints] = useState([]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const res = await fetch('/api/sensor-data');
-      const json = await res.json();
-      setDataPoints(json);
-    };
-
-    fetchData();
-
-    // Optional: poll every 10 seconds
-    const interval = setInterval(fetchData, 10000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const chartData = {
-    labels: dataPoints.map((d) => new Date(d.timestamp).toLocaleTimeString()),
-    datasets: [
-      {
-        label: 'Temperature (°C)',
-        data: dataPoints.map((d) => d.temperature),
-        borderColor: 'rgba(255, 99, 132, 1)',
-        fill: false,
-      },
-      {
-        label: 'Humidity (%)',
-        data: dataPoints.map((d) => d.humidity),
-        borderColor: 'rgba(54, 162, 235, 1)',
-        fill: false,
-      },
-    ],
-  };
-
-  const chartOptions = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: 'top',
-      },
-    },
-  };
   // State for farm and product data
   const [userFarms, setUserFarms] = useState([]);
   const [selectedFarm, setSelectedFarm] = useState(null);
@@ -94,36 +54,100 @@ export default function FarmerDashboard() {
   const shippableRoles = ['Collection Point', 'Warehouse', 'Processing Unit', 'Retailer'];
     const [liveData, setLiveData] = useState([]);
 
-useEffect(() => {
-  const fetchSensorData = async () => {
-    try {
-      const res = await fetch('/api/sensor-data');
-      const json = await res.json();
+const [sensorData, setSensorData] = useState([]);
 
-      // Format data without converting timestamps
-      const formatted = json.map(entry => ({
-        ...entry,
-        timestamp: entry.timestamp, // keep ISO string like "2025-09-15T14:20:00Z"
-        temperature: Number(entry.temperature),
-        humidity: Number(entry.humidity),
-        soil: Number(entry.soil),
-        rain: Number(entry.rain),
-      }));
 
-      // Display the data in the terminal (browser console)
-      console.log("Fetched sensor data:", formatted);
+ const latestTimestampRef = useRef(null); // Keeps track of last timestamp
 
-      setLiveData(formatted);
-    } catch (error) {
-      console.error("Failed to fetch sensor data:", error);
-    }
+  useEffect(() => {
+    const fetchSensorData = async () => {
+      try {
+        const query = latestTimestampRef.current
+          ? `?after=${encodeURIComponent(latestTimestampRef.current)}`
+          : '';
+
+        const res = await fetch(`/api/sensor-data${query}`);
+        const newData = await res.json();
+
+        if (newData.length > 0) {
+          setLiveData((prev) => {
+            const updated = [...prev, ...newData];
+            return updated.slice(-100); // Optional: limit to last 100 entries
+          });
+
+          latestTimestampRef.current = newData[newData.length - 1].timestamp;
+        }
+      } catch (error) {
+        console.error('Failed to fetch sensor data:', error);
+      }
+    };
+
+    // Initial load
+    fetchSensorData();
+
+    // Fetch every 10 seconds
+    const interval = setInterval(fetchSensorData, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Chart.js data
+  const chartData = {
+    labels: liveData.map((d) => new Date(d.timestamp).toLocaleTimeString()),
+    datasets: [
+      {
+        label: 'Temperature (°C)',
+        data: liveData.map((d) => d.temperature),
+        borderColor: 'rgba(255, 99, 132, 1)',
+        fill: false,
+        tension: 0.3,
+        pointRadius: 0,
+      },
+      {
+        label: 'Humidity (%)',
+        data: liveData.map((d) => d.humidity),
+        borderColor: 'rgba(54, 162, 235, 1)',
+        fill: false,
+        tension: 0.3,
+        pointRadius: 0,
+      },
+      {
+        label: 'Soil Moisture',
+        data: liveData.map((d) => d.soil),
+        borderColor: 'rgba(34, 197, 94, 1)',
+        fill: false,
+        tension: 0.3,
+        pointRadius: 0,
+      },
+      {
+        label: 'Rain',
+        data: liveData.map((d) => d.rain),
+        borderColor: 'rgba(129, 140, 248, 1)',
+        fill: false,
+        tension: 0.3,
+        pointRadius: 0,
+      },
+    ],
   };
 
-  fetchSensorData();
-  const interval = setInterval(fetchSensorData, 10000); // Refresh every 10s
-
-  return () => clearInterval(interval);
-}, []);
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+    },
+    scales: {
+      x: {
+        ticks: {
+          autoSkip: true,
+          maxTicksLimit: 10,
+        },
+      },
+      y: {
+        beginAtZero: true,
+      },
+    },
+  };
 
 
   
