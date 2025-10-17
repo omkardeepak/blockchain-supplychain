@@ -15,6 +15,10 @@ const char* password = "jkiajkia";
 // ----- Server Endpoint -----
 const char* serverURL = "http://10.44.21.11:3000/api/sensor-data";
 
+// ----- Farm Identifier -----
+// Replace this with the actual ID of the farm from your MongoDB database
+const char* farmId = "68f1f0ad8b1f5c98334fb5a5";
+
 // ----- Soil Calibration -----
 const int dryValue = 620;
 const int wetValue = 310;
@@ -92,7 +96,8 @@ void sendToServer(float temp, float hum, int soil, float rain) {
   json += "\"temperature\":" + String(temp, 1) + ",";
   json += "\"humidity\":" + String(hum, 1) + ",";
   json += "\"soil\":" + String(soil) + ",";
-  json += "\"rain\":" + String(rain, 2);
+  json += "\"rain\":" + String(rain, 2) + ",";
+  json += "\"farmId\":\"" + String(farmId) + "\"";
   json += "}";
 
   Serial.println("Sending: " + json);

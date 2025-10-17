@@ -60,35 +60,31 @@ const [sensorData, setSensorData] = useState([]);
  const latestTimestampRef = useRef(null); // Keeps track of last timestamp
 
   useEffect(() => {
-    const fetchSensorData = async () => {
-      try {
-        const query = latestTimestampRef.current
-          ? `?after=${encodeURIComponent(latestTimestampRef.current)}`
-          : '';
-
-        const res = await fetch(`/api/sensor-data${query}`);
-        const newData = await res.json();
-
-        if (newData.length > 0) {
-          setLiveData((prev) => {
-            const updated = [...prev, ...newData];
-            return updated.slice(-100); // Optional: limit to last 100 entries
-          });
-
-          latestTimestampRef.current = newData[newData.length - 1].timestamp;
+    if (user && user._id) {
+      console.log("User found, fetching data for farmId:", user._id); // Log user ID
+      const fetchSensorData = async () => {
+        try {
+          const res = await fetch(`/api/sensor-data?farmId=${user._id}`);
+          if (!res.ok) {
+            throw new Error(`Data could not be fetched! Status: ${res.status}`);
+          }
+          const newData = await res.json();
+          console.log("Received sensor data:", newData); // Log received data
+          setSensorData(newData);
+        } catch (error) {
+          console.error("Failed to fetch sensor data:", error);
+          setSensorData([]); // Clear data on error
         }
-      } catch (error) {
-        console.error('Failed to fetch sensor data:', error);
-      }
-    };
+      };
 
-    // Initial load
-    fetchSensorData();
+      fetchSensorData();
+      const intervalId = setInterval(fetchSensorData, 5000); // 5 seconds
 
-    // Fetch every 10 seconds
-    const interval = setInterval(fetchSensorData, 10000);
-    return () => clearInterval(interval);
-  }, []);
+      return () => clearInterval(intervalId);
+    } else {
+      console.log("User not available or missing ID, skipping data fetch."); // Log if user is not ready
+    }
+  }, [user]);
 
   // Chart.js data
   const chartData = {
@@ -359,10 +355,10 @@ const [sensorData, setSensorData] = useState([]);
                     <div className="mb-8">
     <h2 className="text-2xl font-bold text-gray-800 mb-4">Live Farm Conditions</h2>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-<GraphBlock title="Temperature (°C)" color="#f87171" dataKey="temperature" data={liveData} />
-<GraphBlock title="Humidity (%)" color="#60a5fa" dataKey="humidity" data={liveData} />
-<GraphBlock title="Soil Moisture" color="#34d399" dataKey="soil" data={liveData} />
-<GraphBlock title="Rain Sensor" color="#818cf8" dataKey="rain" data={liveData} />
+<GraphBlock title="Temperature (°C)" color="#f87171" dataKey="temperature" data={sensorData} />
+<GraphBlock title="Humidity (%)" color="#60a5fa" dataKey="humidity" data={sensorData} />
+<GraphBlock title="Soil Moisture" color="#34d399" dataKey="soil" data={sensorData} />
+<GraphBlock title="Rain Sensor" color="#818cf8" dataKey="rain" data={sensorData} />
 
     </div>
 </div>

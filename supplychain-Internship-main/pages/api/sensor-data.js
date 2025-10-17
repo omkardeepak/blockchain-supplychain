@@ -1,10 +1,11 @@
-import { connectToDatabase } from '../../lib/mongodb'
+import { connectToDatabase } from '../../lib/mongodb';
+import { ObjectId } from 'mongodb';
 
 export default async function handler(req, res) {
   const { db } = await connectToDatabase("signup");
 
   if (req.method === 'POST') {
-    const { temperature, humidity, soil, rain } = req.body;
+    const { temperature, humidity, soil, rain, farmId } = req.body;
 
     if (
       temperature === undefined ||
@@ -15,12 +16,17 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: 'Missing sensor data fields' });
     }
 
+    if (!farmId) {
+      return res.status(400).json({ message: 'farmId is required' });
+    }
+
     const entry = {
       temperature: Number(temperature),
       humidity: Number(humidity),
       soil: Number(soil),
       rain: Number(rain),
       timestamp: new Date(), // store as Date object
+      farmId: new ObjectId(farmId),
     };
 
     try {
@@ -33,13 +39,16 @@ export default async function handler(req, res) {
   }
   
 if (req.method === 'GET') {
-  try {
-    const { after } = req.query;
-    const filter = after ? { timestamp: { $gt: new Date(after) } } : {};
+  const { farmId } = req.query;
 
+  if (!farmId) {
+    return res.status(400).json({ message: 'Farm ID is required' });
+  }
+
+  try {
     const data = await db
       .collection('sensorData')
-      .find(filter, { projection: { _id: 0 } })
+      .find({ farmId: new ObjectId(farmId) })
       .sort({ timestamp: -1 })
       .limit(100)
       .toArray();
@@ -47,17 +56,15 @@ if (req.method === 'GET') {
     const formattedData = data.map(entry => ({
       ...entry,
       timestamp: entry.timestamp.toISOString(),
-    }));
-
-    return res.status(200).json(formattedData.reverse()); // Oldest to newest
+    })).reverse();
+    
+    return res.status(200).json(formattedData);
   } catch (error) {
     console.error('Failed to fetch sensor data:', error);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 }
 
-
-  // Handle unsupported methods
-  res.setHeader('Allow', ['GET', 'POST']);
-  return res.status(405).end(`Method ${req.method} Not Allowed`);
+  res.setHeader('Allow', ['POST', 'GET']);
+  res.status(405).end(`Method ${req.method} Not Allowed`);
 }
