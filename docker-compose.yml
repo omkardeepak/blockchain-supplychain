@@ -1,0 +1,55 @@
+services:
+  frontend:
+    build:
+      context: ./supplychain-Internship-main
+      dockerfile: Dockerfile
+    image: supplychain-frontend:latest
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      # Server-side connection to MongoDB (used by Next.js API routes)
+      MONGODB_URI: "mongodb://mongo:27017"
+      # Frontend-accessible RPC endpoint (adjust if you use Besu instead of Hardhat)
+      NEXT_PUBLIC_RPC_URL: "http://contracts:8545"
+    depends_on:
+      - contracts
+      - mongo
+    volumes:
+      - ./supplychain-Internship-main/public:/app/public:ro
+
+  contracts:
+    build:
+      context: ./solidity-supplychain
+      dockerfile: Dockerfile
+    image: supplychain-contracts:latest
+    ports:
+      - "8545:8545"
+    volumes:
+      - ./solidity-supplychain:/usr/src/app
+    command: ["npx", "hardhat", "node"]
+
+  mongo:
+    image: mongo:6.0
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: signup
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mongo-data:
+
+# Notes:
+# - The repository contains an existing Besu network compose file at
+#   `my-besu-network/docker-compose.yml`. If you want to bring Besu up together
+#   with these services, run:
+#     docker-compose -f my-besu-network/docker-compose.yml -f docker-compose.yml up --build
+# - Customize environment variables and ports as needed.

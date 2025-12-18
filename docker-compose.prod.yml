@@ -1,0 +1,27 @@
+version: '3.8'
+services:
+  frontend:
+    image: supplychain-frontend:latest
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: "mongodb://mongo:27017"
+      NEXT_PUBLIC_RPC_URL: "http://contracts:8545"
+    depends_on:
+      - mongo
+
+  contracts:
+    image: supplychain-contracts:latest
+    ports:
+      - "8545:8545"
+
+  mongo:
+    image: mongo:6.0
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+
+volumes:
+  mongo-data:
