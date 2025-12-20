@@ -12,8 +12,7 @@ export async function connectToDatabase(dbName = "signup") {
 
     // Use environment variable when available. Falls back to previous hard-coded
     // connection string for backwards compatibility (not recommended).
-    const uri = process.env.MONGODB_URI ||
-        "mongodb+srv://omkar:omkardeepak@cluster0.42fffku.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+    const uri = process.env.MONGODB_URI;
 
     const client = new MongoClient(uri, {
         connectTimeoutMS: 40000,
