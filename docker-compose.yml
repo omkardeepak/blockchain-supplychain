@@ -1,0 +1,27 @@
+services:
+  frontend:
+    build:
+      context: ./supplychain-Internship-main
+      dockerfile: Dockerfile
+    image: supplychain-frontend:latest
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_RPC_URL: "http://contracts:8545"
+
+    volumes:
+      - ./supplychain-Internship-main/public:/app/public:ro
+    depends_on:
+      - contracts
+
+  contracts:
+    build:
+      context: ./solidity-supplychain
+      dockerfile: Dockerfile
+    image: supplychain-contracts:latest
+    ports:
+      - "8545:8545"
+    volumes:
+      - ./solidity-supplychain:/usr/src/app
+    command: ["npx", "hardhat", "node"]

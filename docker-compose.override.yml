@@ -1,0 +1,25 @@
+
+services:
+  frontend:
+    build:
+      context: ./supplychain-Internship-main
+      dockerfile: Dockerfile
+    volumes:
+      - ./supplychain-Internship-main:/app
+      - /app/node_modules
+    environment:
+      NODE_ENV: development
+
+    command: ["npm", "run", "dev"]
+    ports:
+      - "3000:3000"
+
+
+  contracts:
+    build:
+      context: ./solidity-supplychain
+      dockerfile: Dockerfile
+    volumes:
+      - ./solidity-supplychain:/usr/src/app
+      - /usr/src/app/node_modules
+    command: ["npx", "hardhat", "node"]
